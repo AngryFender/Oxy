@@ -1,0 +1,9 @@
+[Unit]
+Description=Process stack
+
+[Service]
+ExecStart=/opt/Oxy/bin/Oxy
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
