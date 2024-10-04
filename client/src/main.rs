@@ -1,5 +1,6 @@
 use std::env;
-use ipipe::Pipe;
+use std::io::BufRead;
+use ipipe::{pprint, Pipe};
 use std::io::Write;
 use std::process::Command;
 
@@ -18,14 +19,10 @@ fn main() {
         let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
         writeln!(&mut pipe,"{}", args[2].to_string());
 
+    }
 
-       /* let output = Command::new("sh")
-            .arg("-c")
-            .arg(args[2].to_string())
-            .output()
-            .expect("failed to execute process");
-
-        io::stdout().write_all(&output.stdout).unwrap();
-        io::stderr().write_all(&output.stderr).unwrap();*/
+    let mut outputPipe = Pipe::with_name("oxy_pipe_output").unwrap();
+    for line in std::io::BufReader::new(outputPipe).lines(){
+        println!("{}",line.unwrap());
     }
 }
