@@ -3,6 +3,7 @@ use std::io::BufRead;
 use ipipe::{pprint, Pipe};
 use std::io::Write;
 use std::process::Command;
+use sysinfo::get_current_pid;
 
 fn main() {
     if env::consts::OS != "linux" {
@@ -15,14 +16,30 @@ fn main() {
         return;
     }
 
-    if args[1] == "run" {
-        let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
-        writeln!(&mut pipe,"{}", args[2].to_string());
-
+    let mut currentPid = String::new();
+    match get_current_pid() {
+        Ok(pid) => {
+            currentPid = format!("{}",pid);
+            println!("current pid: {}", currentPid);
+        }
+        Err(e) => {
+            println!("failed to get current pid: {}", e);
+        }
     }
 
-    let mut outputPipe = Pipe::with_name("oxy_pipe_output").unwrap();
+    if args[1] == "run" {
+        let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
+        writeln!(&mut pipe,"{} {}", args[2].to_string(), currentPid);
+    }
+
+//    let outputPipeName: String = "oxy_pip_output_" + currentPid;
+    let mut outputPipe = Pipe::with_name("oxy_output_pipe").unwrap();
     for line in std::io::BufReader::new(outputPipe).lines(){
-        println!("{}",line.unwrap());
+        let lineOutput: String = line.unwrap();
+        println!("{}",lineOutput);
+        match lineOutput == "Oxy-over" {
+            true => { break; }
+            false => {}
+        }
     }
 }
