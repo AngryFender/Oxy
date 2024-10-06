@@ -5,25 +5,33 @@ use std::io::Write;
 use std::process::Command;
 
 fn main() {
-    println!("starting oxyd service...");
+    println!("Starting oxyd service...");
 
     let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
-    println!("Pipe path:{}", pipe.path().display());
-
+    println!("Listening on: {}", pipe.path().display());
 
     for line in std::io::BufReader::new(pipe).lines(){
-        thread::sleep_ms(1000);
+        let allAgrs: String = line.unwrap();
+        let argsCollection: Vec<&str> = allAgrs.split(";;").collect();
+
+        if(argsCollection.len()!=2){
+            continue;
+        }
+
+        println!("Requested command: {}",argsCollection[0]);
+        println!("Requested pid: {}",argsCollection[1]);
+
         let output = Command::new("sh")
             .arg("-c")
-            .arg(line.unwrap())
+            .arg(argsCollection[0])
             .output()
             .expect("failed to execute process");
 
-        thread::sleep_ms(1000);
         let outputMessage =  String::from_utf8_lossy(&output.stdout);
-        print!("{}",outputMessage);
-        let mut outputPipe = Pipe::with_name("oxy_pipe_output").unwrap();
-        writeln!(&mut outputPipe,"this is a test").unwrap();
+        println!(" ↳ {}",outputMessage);
+        let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
+        let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
         writeln!(&mut outputPipe,"{}", outputMessage).unwrap();
+        writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
     }
 }
