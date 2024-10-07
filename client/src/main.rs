@@ -1,3 +1,5 @@
+use std::fs;
+use std::io;
 use std::env;
 use std::io::BufRead;
 use ipipe::{pprint, Pipe};
@@ -38,7 +40,14 @@ fn main() {
     for line in std::io::BufReader::new(outputPipe).lines(){
         let lineOutput: String = line.unwrap();
         match lineOutput == "Oxy-over" {
-            true => { break; }
+            true => {
+                // Attempt to remove the named pipe
+                    let outputPipePath: String = "/tmp/".to_string()+ &outputPipeName;
+                    match fs::remove_file(&outputPipePath) {
+                    Ok(_) => println!("Successfully removed the named pipe: {}", outputPipePath),
+                    Err(e) => eprintln!("Failed to remove the named pipe: {}", outputPipePath),
+                }
+                break; }
             false => {
                 println!(" ↲ {}", lineOutput);
             }
