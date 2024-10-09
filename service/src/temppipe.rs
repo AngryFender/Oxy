@@ -1,15 +1,24 @@
+use std::fs;
+use ipipe::Pipe;
 struct TempPipe {
-    path: String,
+    pipe: Pipe,
 }
 impl TempPipe {
-    fn new(path: &str) -> Self {
-        Self{path : path.to_string()}
+    fn new(name: &str) -> Self {
+        let pipe = Pipe::with_name(name).expect("Failed to create oxy_pipe");
 
+        Self{
+            pipe
+        }
+    }
+
+    fn get_pipe(&self) -> &Pipe {
+        &self.pipe
     }
 }
 
 impl Drop for TempPipe {
     fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
+        let _ = fs::remove_file(&self.pipe.path());
     }
 }
