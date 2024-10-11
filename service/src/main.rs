@@ -1,3 +1,5 @@
+mod temppipe;
+use temppipe::TempPipe;
 use ipipe::{pprint, Pipe};
 use std::io::BufRead;
 use std::thread;
@@ -7,10 +9,10 @@ use std::process::Command;
 fn main() {
     println!("Starting oxyd service...");
 
-    let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
-    println!("Listening on: {}", pipe.path().display());
+    let mut tempPipe = TempPipe::new("oxy_pipe");
+    println!("Listening on: {}", tempPipe.get_path().display());
 
-    for line in std::io::BufReader::new(pipe).lines(){
+    for line in std::io::BufReader::new(tempPipe.get_pipe()).lines(){
         let allAgrs: String = line.unwrap();
         let argsCollection: Vec<&str> = allAgrs.split(";;").collect();
 
