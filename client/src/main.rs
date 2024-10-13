@@ -1,3 +1,5 @@
+mod temppipe;
+use temppipe::TempPipe;
 use std::fs;
 use std::io;
 use std::env;
