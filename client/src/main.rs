@@ -38,17 +38,11 @@ fn main() {
     }
 
     let outputPipeName: String = "oxy_pip_output_".to_string() + &currentPid;
-    let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
-    for line in std::io::BufReader::new(outputPipe).lines(){
+    let mut outputPipe = TempPipe::new(&outputPipeName);
+    for line in std::io::BufReader::new(outputPipe.get_pipe()).lines(){
         let lineOutput: String = line.unwrap();
         match lineOutput == "Oxy-over" {
             true => {
-                // Attempt to remove the named pipe
-                    let outputPipePath: String = "/tmp/".to_string()+ &outputPipeName;
-                    match fs::remove_file(&outputPipePath) {
-                    Ok(_) => println!("Successfully removed the named pipe: {}", outputPipePath),
-                    Err(e) => eprintln!("Failed to remove the named pipe: {}", outputPipePath),
-                }
                 break; }
             false => {
                 println!(" ↲ {}", lineOutput);
