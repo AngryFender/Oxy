@@ -9,6 +9,14 @@ use std::process::Command;
 fn main() {
     println!("Starting oxyd service...");
 
+    let handle = thread::spawn(|| {
+        let mut tempPipe = TempPipe::new("oxy_instructions");
+        println!("Listening instructions on: {}", tempPipe.get_path().display());
+        for line in std::io::BufReader::new(tempPipe.get_pipe()).lines(){
+            println!("{}",line.unwrap());
+        }
+    });
+
     let mut tempPipe = TempPipe::new("oxy_pipe");
     println!("Listening on: {}", tempPipe.get_path().display());
 
