@@ -5,9 +5,12 @@ use std::io::BufRead;
 use std::thread;
 use std::io::Write;
 use std::process::Command;
+use std::sync::mpsc;
 
 fn main() {
     println!("Starting oxyd service...");
+
+    let (tx,rx) = mpsc::channel();
 
     let handle = thread::spawn(|| {
         let mut tempPipe = TempPipe::new("oxy_instructions");
