@@ -12,11 +12,13 @@ fn main() {
 
     let (tx,rx) = mpsc::channel();
 
-    let handle = thread::spawn(|| {
+    let handle = thread::spawn( move || {
         let mut tempPipe = TempPipe::new("oxy_instructions");
         println!("Listening instructions on: {}", tempPipe.get_path().display());
         for line in std::io::BufReader::new(tempPipe.get_pipe()).lines(){
-            println!("{}",line.unwrap());
+            let val = String::from(line.unwrap());
+            tx.send(val.clone()).unwrap();
+            println!("{}",val);
         }
     });
 
