@@ -10,15 +10,24 @@ use std::sync::mpsc;
 fn main() {
     println!("Starting oxyd service...");
 
-    let (tx,rx) = mpsc::channel();
+    let (command_tx,command_rx) = mpsc::channel();
+    let (instruction_tx,instruction_rx) = mpsc::channel();
 
-    let threadProducer = thread::spawn( move || {
-        let mut tempPipe = TempPipe::new("oxy_pipe");
-        println!("Listening commands on: {}", tempPipe.get_path().display());
-        for line in std::io::BufReader::new(tempPipe.get_pipe()).lines(){
-            let val = String::from(line.unwrap());
-            tx.send(val.clone()).unwrap();
-            println!("{}",val);
+    let thread_instruction_producer = thread::spawn( move  || {
+        let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
+        println!("Listening instructions on: {}", instruction_pipe.get_path().display());
+        for line in std::io::BufReader::new(instruction_pipe.get_pipe()).lines(){
+            let instruction = String::from(line.unwrap());
+            instruction_tx.send(instruction.clone()).unwrap();
+        }
+    });
+
+    let thread_command_producer = thread::spawn( move  || {
+        let mut command_pipe = TempPipe::new("oxy_pipe");
+        println!("Listening commands on: {}", command_pipe.get_path().display());
+        for line in std::io::BufReader::new(command_pipe.get_pipe()).lines(){
+            let command = String::from(line.unwrap());
+            command_tx.send(command.clone()).unwrap();
         }
     });
 
@@ -48,6 +57,6 @@ fn main() {
         };
 
     });
-
-    let _ = threadProducer.join();
+    let _ = thread_instruction_producer.join();
+    let _ = thread_command_producer.join();
 }
