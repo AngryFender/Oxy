@@ -1,11 +1,12 @@
 mod temppipe;
 use temppipe::TempPipe;
-use ipipe::{pprint, Pipe};
+use ipipe::{Pipe};
 use std::io::BufRead;
 use std::thread;
 use std::io::Write;
 use std::process::Command;
 use std::sync::mpsc;
+use std::thread::spawn;
 
 fn main() {
     println!("Starting oxyd service...");
@@ -31,25 +32,28 @@ fn main() {
         }
     });
 
+    let commands: Vec<&Command> ;
+    let mut current_command:String = String::new();
     let threadConsumer = thread::spawn(move || {
-        for command in rx {
+        for command in command_rx {
             let argsCollection: Vec<&str> = command.split(";;").collect();
 
             if(argsCollection.len()!=2){
                 continue;
             }
 
-            println!("Requested command: {}",argsCollection[0]);
-            println!("Requested pid: {}",argsCollection[1]);
+            println!("Client pid: {} : Requested command : {}",argsCollection[1], argsCollection[0]);
 
-            let output = Command::new("sh")
+            current_command = command.clone();
+            let process = Command::new("sh")
                 .arg("-c")
                 .arg(argsCollection[0])
-                .output()
-                .expect("failed to execute process");
+                .spawn();
+            let output=process.unwrap().wait_with_output().expect("failed to execute process");
 
             let outputMessage =  String::from_utf8_lossy(&output.stdout);
-            println!(" ↳ {}",outputMessage);
+            //println!(" ↳ {}",outputMessage);
+
             let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
             let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
             writeln!(&mut outputPipe,"{}", outputMessage).unwrap();
