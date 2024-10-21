@@ -4,9 +4,10 @@ use ipipe::{Pipe};
 use std::io::BufRead;
 use std::thread;
 use std::io::Write;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread::spawn;
+use log::error;
 
 fn main() {
     println!("Starting oxyd service...");
@@ -48,15 +49,20 @@ fn main() {
             let process = Command::new("sh")
                 .arg("-c")
                 .arg(argsCollection[0])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
                 .spawn();
-            let output=process.unwrap().wait_with_output().expect("failed to execute process");
+            //let output=process.unwrap().wait_with_output().expect("failed to execute process");
+            let output=process.unwrap().wait_with_output().expect("Failed to wait on process");
 
             let outputMessage =  String::from_utf8_lossy(&output.stdout);
+            let errorMessage =  String::from_utf8_lossy(&output.stderr);
             //println!(" ↳ {}",outputMessage);
 
             let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
             let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
             writeln!(&mut outputPipe,"{}", outputMessage).unwrap();
+            writeln!(&mut outputPipe,"{}", errorMessage).unwrap();
             writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
         };
 
