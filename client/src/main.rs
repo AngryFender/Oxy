@@ -31,10 +31,17 @@ fn main() {
         }
     }
 
-    if args[1] == "run" {
-        let mut pipe = Pipe::with_name("oxy_pipe").unwrap();
-        println!("Requested command: {}",args[2]);
-        writeln!(&mut pipe,"{}{}{}", args[2].to_string(),";;",currentPid);
+    let mut pipe: Option<Pipe> = match args[1].as_str(){
+        "run"=> Pipe::with_name("oxy_pipe").ok(),
+        "status"=> Pipe::with_name("oxy_pipe").ok(),
+        _=> None,
+    };
+    println!("Requested command: {}", args[2]);
+
+    if let Some(ref mut p) = pipe {
+        writeln!(p, "{}{}{}", args[2], ";;", currentPid).unwrap();
+    } else {
+        eprintln!("Failed to open pipe");
     }
 
     let outputPipeName: String = "oxy_pip_output_".to_string() + &currentPid;
