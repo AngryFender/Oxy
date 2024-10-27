@@ -24,6 +24,26 @@ fn main() {
         }
     });
 
+    let instructThread = thread::spawn(move ||{
+       for instruction in instruction_rx {
+          let argCollection: Vec<&String> = std::env::args().collect();
+           if(argCollection.len() < 2){
+               continue;
+           }
+
+           println!("Client pid: {} : Requested instruction : {}",argCollection[1], argCollection[0]);
+
+           if argCollection[0] == "status"{
+                //TODO: Print status
+                // 1. Show total number of commands left
+                // 2. Show stdout of the current process?
+               
+           }
+
+       }
+
+    });
+
     let thread_command_producer = thread::spawn( move  || {
         let mut command_pipe = TempPipe::new("oxy_pipe");
         println!("Listening commands on: {}", command_pipe.get_path().display());
