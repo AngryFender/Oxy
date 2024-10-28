@@ -5,6 +5,7 @@ use std::io::BufRead;
 use std::thread;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use crossbeam_channel::unbounded;
 use std::sync::mpsc;
 use std::thread::spawn;
 use log::error;
@@ -37,7 +38,10 @@ fn main() {
                 //TODO: Print status
                 // 1. Show total number of commands left
                 // 2. Show stdout of the current process?
-               
+               let outputPipeName: String = "oxy_pip_output_".to_string() + &argCollection[1];
+               let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
+               //writeln!(&mut outputPipe,"No of commands: {}",command_tx. ).unwrap();
+               //writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
            }
 
        }
