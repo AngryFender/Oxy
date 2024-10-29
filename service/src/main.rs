@@ -13,7 +13,7 @@ use log::error;
 fn main() {
     println!("Starting oxyd service...");
 
-    let (command_tx,command_rx) = mpsc::channel();
+    let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
 
     let thread_instruction_producer = thread::spawn( move  || {
@@ -52,16 +52,18 @@ fn main() {
     let thread_command_producer = thread::spawn( move  || {
         let mut command_pipe = TempPipe::new("oxy_pipe");
         println!("Listening commands on: {}", command_pipe.get_path().display());
+        let command_tx_clone = command_tx.clone();
         for line in std::io::BufReader::new(command_pipe.get_pipe()).lines(){
             let command = String::from(line.unwrap());
-            command_tx.send(command.clone()).unwrap();
+            command_tx_clone.send(command.clone()).unwrap();
         }
     });
 
     let commands: Vec<&Command> ;
     let mut current_command:String = String::new();
     let threadConsumer = thread::spawn(move || {
-        for command in command_rx {
+        let command_rx_clone = command_rx.clone();
+        for command in command_rx_clone {
             let argsCollection: Vec<&str> = command.split(";;").collect();
 
             if(argsCollection.len()!=2){
