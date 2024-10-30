@@ -1,4 +1,6 @@
 mod temppipe;
+
+use std::collections::VecDeque;
 use temppipe::TempPipe;
 use ipipe::{Pipe};
 use std::io::BufRead;
@@ -6,7 +8,7 @@ use std::thread;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use crossbeam_channel::unbounded;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread::spawn;
 use log::error;
 
@@ -15,6 +17,7 @@ fn main() {
 
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
+    let command_list = Arc::new(Mutex::new(Vec::<String>::new()));
 
     let thread_instruction_producer = thread::spawn( move  || {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
@@ -49,6 +52,7 @@ fn main() {
 
     });
 
+    let command_list_update = Arc::clone(&command_list);
     let thread_command_producer = thread::spawn( move  || {
         let mut command_pipe = TempPipe::new("oxy_pipe");
         println!("Listening commands on: {}", command_pipe.get_path().display());
@@ -59,7 +63,7 @@ fn main() {
         }
     });
 
-    let commands: Vec<&Command> ;
+    let command_list_consume = Arc::clone(&command_list);
     let mut current_command:String = String::new();
     let threadConsumer = thread::spawn(move || {
         let command_rx_clone = command_rx.clone();
