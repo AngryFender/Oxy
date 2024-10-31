@@ -17,7 +17,7 @@ fn main() {
 
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
-    let command_list = Arc::new(Mutex::new(Vec::<String>::new()));
+    let command_list = Arc::new(Mutex::new(VecDeque::<String>::new()));
 
     let thread_instruction_producer = thread::spawn( move  || {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
@@ -60,6 +60,8 @@ fn main() {
         for line in std::io::BufReader::new(command_pipe.get_pipe()).lines(){
             let command = String::from(line.unwrap());
             command_tx_clone.send(command.clone()).unwrap();
+            let mut command_list_guard = command_list_update.lock().unwrap();
+            command_list_guard.push_back(command);
         }
     });
 
