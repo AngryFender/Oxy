@@ -37,22 +37,22 @@ fn main() {
                continue;
            }
 
-           println!("Client pid: {} : Requested instruction : {}",argsCollection[1], argsCollection[0]);
+            println!("Client pid: {} : Requested instruction : {}",argsCollection[1], argsCollection[0]);
 
-           if argsCollection[0] == "status"{
+               if argsCollection[0] == "status"{
                 //TODO: Print status
                 // 1. Show total number of commands left
                 // 2. Show stdout of the current process?
 
-               let mut command_list = command_list_consume.lock().unwrap();
-               for command in command_list.iter(){
-                   println!("{}",&command);
-               }
-
-               //writeln!(&mut outputPipe,"No of commands: {}",command_tx. ).unwrap();
-               //writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
+                let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
+                let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
+                let mut command_list = command_list_consume.lock().unwrap();
+                for command in command_list.iter(){
+                    writeln!(&mut outputPipe,"{}", command ).unwrap();
+                    writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
+                    println!("{}",&command);
+                }
            }
-
        }
 
     });
