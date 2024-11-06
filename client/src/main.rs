@@ -16,7 +16,7 @@ fn main() {
     println!("Starting, Oxy!");
 
     let args: Vec<String> = env::args().collect();
-    if args.len() <3{
+    if args.len() <2{
         return;
     }
 
@@ -31,17 +31,26 @@ fn main() {
         }
     }
 
-    let mut pipe: Option<Pipe> = match args[1].as_str(){
-        "run"=> Pipe::with_name("oxy_pipe").ok(),
-        "status"=> Pipe::with_name("oxy_pipe").ok(),
-        _=> None,
-    };
-    println!("Requested command: {}", args[2]);
-
-    if let Some(ref mut p) = pipe {
-        writeln!(p, "{}{}{}", args[2], ";;", currentPid).unwrap();
-    } else {
-        eprintln!("Failed to open pipe");
+    let mut pipe:Option<Pipe> = None;
+    match args[1].as_str()
+    {
+        "run" => {
+            pipe = Pipe::with_name("oxy_pipe").ok();
+            if let Some(ref mut p) = pipe {
+                writeln!(p, "{}{}{}", args[2], ";;", currentPid).unwrap();
+                println!("{}{}{}", args[2], ";;", currentPid);
+            }
+        },
+        "status" => {
+            pipe = Pipe::with_name("oxy_instruction_pipe").ok();
+            if let Some(ref mut p) = pipe {
+                println!("{}{}{}", "status", ";;", currentPid);
+                writeln!(p, "{}{}{}", "status", ";;", currentPid).unwrap();
+            }
+        },
+        _ =>{
+            println!("unknown command");
+        }
     }
 
     let outputPipeName: String = "oxy_pip_output_".to_string() + &currentPid;
