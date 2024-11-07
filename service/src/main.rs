@@ -23,8 +23,15 @@ fn main() {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
         println!("Listening instructions on: {}", instruction_pipe.get_path().display());
         for line in std::io::BufReader::new(instruction_pipe.get_pipe()).lines(){
+
             let instruction = String::from(line.unwrap());
-            instruction_tx.send(instruction.clone()).unwrap();
+            let argsCollection: Vec<&str> = instruction.split(";;").collect();
+
+            if(argsCollection.len()!=2) {
+                continue;
+            }
+
+            instruction_tx.send(argsCollection[1].clone()).unwrap();
         }
     });
 
@@ -37,7 +44,7 @@ fn main() {
                continue;
            }
 
-            println!("Client pid: {} : Requested instruction : {}",argsCollection[1], argsCollection[0]);
+           println!("Requested instruction : {}", argsCollection[0]);
 
                if argsCollection[0] == "status"{
                 //TODO: Print status
