@@ -23,15 +23,8 @@ fn main() {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
         println!("Listening instructions on: {}", instruction_pipe.get_path().display());
         for line in std::io::BufReader::new(instruction_pipe.get_pipe()).lines(){
-
             let instruction = String::from(line.unwrap());
-            let argsCollection: Vec<&str> = instruction.split(";;").collect();
-
-            if(argsCollection.len()!=2) {
-                continue;
-            }
-
-            instruction_tx.send(argsCollection[1].clone()).unwrap();
+            instruction_tx.send(instruction.clone()).unwrap();
         }
     });
 
@@ -55,10 +48,15 @@ fn main() {
                 let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
                 let mut command_list = command_list_consume.lock().unwrap();
                 for command in command_list.iter(){
-                    writeln!(&mut outputPipe,"{}", command ).unwrap();
-                    writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
+                    let argsCollection: Vec<&str> = command.split(";;").collect();
+
+                    if(argsCollection.len()!=2){
+                        continue;
+                    }
+                    writeln!(&mut outputPipe,"{}", argsCollection[0].to_string()).unwrap();
                     println!("{}",&command);
                 }
+                writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
            }
        }
 
