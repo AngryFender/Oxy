@@ -75,7 +75,7 @@ fn main() {
         }
     });
 
-    let command_list_consume = Arc::clone(&command_list);
+    let command_list_pop = Arc::clone(&command_list);
     let mut current_command:String = String::new();
     let threadConsumer = thread::spawn(move || {
         let command_rx_clone = command_rx.clone();
@@ -107,8 +107,11 @@ fn main() {
             writeln!(&mut outputPipe,"{}", outputMessage).unwrap();
             writeln!(&mut outputPipe,"{}", errorMessage).unwrap();
             writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
-        };
 
+            if let Ok(mut list )= command_list_pop.lock(){
+                list.pop_front();
+            }
+        };
     });
     let _ = thread_instruction_producer.join();
     let _ = thread_command_producer.join();
