@@ -46,16 +46,19 @@ fn main() {
 
                 let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
                 let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
+
                 let mut command_list = command_list_consume.lock().unwrap();
+                writeln!(&mut outputPipe,"==========================================").unwrap();
                 for command in command_list.iter(){
                     let argsCollection: Vec<&str> = command.split(";;").collect();
 
                     if(argsCollection.len()!=2){
                         continue;
                     }
-                    writeln!(&mut outputPipe,"{}", argsCollection[0].to_string()).unwrap();
+                    writeln!(&mut outputPipe,"PID:{}->\"{}\"",argsCollection[1], argsCollection[0].to_string()).unwrap();
                     println!("{}",&command);
                 }
+                writeln!(&mut outputPipe,"==========================================").unwrap();
                 writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
            }
        }
