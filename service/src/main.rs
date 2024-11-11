@@ -3,14 +3,12 @@ mod temppipe;
 use std::collections::VecDeque;
 use temppipe::TempPipe;
 use ipipe::{Pipe};
-use std::io::BufRead;
+use std::io::{BufRead, BufReader, Error, ErrorKind};
 use std::thread;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use crossbeam_channel::unbounded;
 use std::sync::{mpsc, Arc, Mutex};
-use std::thread::spawn;
-use log::error;
 
 fn main() {
     println!("Starting oxyd service...");
@@ -18,6 +16,7 @@ fn main() {
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
     let command_list = Arc::new(Mutex::new(VecDeque::<String>::new()));
+    let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
 
     let thread_instruction_producer = thread::spawn( move  || {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
@@ -78,8 +77,10 @@ fn main() {
         }
     });
 
+
+
     let command_list_pop = Arc::clone(&command_list);
-    let mut current_command:String = String::new();
+    let current_command_output_update = Arc::clone(&current_command_output);
     let threadConsumer = thread::spawn(move || {
         let command_rx_clone = command_rx.clone();
         for command in command_rx_clone {
@@ -91,24 +92,27 @@ fn main() {
 
             println!("Client pid: {} : Requested command : {}",argsCollection[1], argsCollection[0]);
 
-            current_command = command.clone();
             let process = Command::new("sh")
                 .arg("-c")
                 .arg(argsCollection[0])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn();
-            //let output=process.unwrap().wait_with_output().expect("failed to execute process");
-            let output=process.unwrap().wait_with_output().expect("Failed to wait on process");
 
-            let outputMessage =  String::from_utf8_lossy(&output.stdout);
-            let errorMessage =  String::from_utf8_lossy(&output.stderr);
-            //println!(" ↳ {}",outputMessage);
+            let stdout = process.unwrap().stdout.expect("Failed to capture stdout");
+            let reader = BufReader::new(stdout).lines();
 
             let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
             let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
-            writeln!(&mut outputPipe,"{}", outputMessage).unwrap();
-            writeln!(&mut outputPipe,"{}", errorMessage).unwrap();
+
+            reader.for_each(|line|{
+                let mut current_output = current_command_output_update.lock().unwrap();
+                let str_line = String::from(line.unwrap());
+                    current_output.push_back(str_line.clone());
+                    println!("{}",str_line);
+                    writeln!(&mut outputPipe,"{}", str_line).unwrap();
+            });
+
             writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
 
             if let Ok(mut list )= command_list_pop.lock(){
