@@ -10,6 +10,11 @@ use std::process::{Command, Stdio};
 use crossbeam_channel::unbounded;
 use std::sync::{mpsc, Arc, Mutex};
 
+// ANSI escape codes for colors
+const RED: &str = "\x1b[31m";
+const GREEN: &str = "\x1b[32m";
+const RESET: &str = "\x1b[0m";
+
 fn main() {
     println!("Starting oxyd service...");
 
@@ -38,24 +43,29 @@ fn main() {
 
            println!("Requested instruction : {}", argsCollection[0]);
 
-               if argsCollection[0] == "status"{
-                //TODO: Print status
-                // 1. Show total number of commands left
-                // 2. Show stdout of the current process?
-
+           if argsCollection[0] == "status"{
                 let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
                 let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
 
                 let mut command_list = command_list_consume.lock().unwrap();
+                writeln!(&mut outputPipe,"\nTotal commands: {}",command_list.len()).unwrap();
                 writeln!(&mut outputPipe,"==========================================").unwrap();
+
+                let mut count = 0;
                 for command in command_list.iter(){
                     let argsCollection: Vec<&str> = command.split(";;").collect();
 
                     if(argsCollection.len()!=2){
                         continue;
                     }
-                    writeln!(&mut outputPipe,"PID:{}->\"{}\"",argsCollection[1], argsCollection[0].to_string()).unwrap();
-                    println!("{}",&command);
+
+                    if count == 0 {
+                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, argsCollection[1], argsCollection[0].to_string(), RESET);
+                        writeln!(&mut outputPipe,"{}", formatted).unwrap();
+                    }else{
+                        writeln!(&mut outputPipe,"{}  PID:{}  \"{}\"",count+1, argsCollection[1], argsCollection[0].to_string()).unwrap();
+                    }
+                    count += 1;
                 }
                 writeln!(&mut outputPipe,"==========================================").unwrap();
                 writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
