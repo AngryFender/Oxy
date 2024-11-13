@@ -1,7 +1,5 @@
 use std::fs;
 use ipipe::Pipe;
-use std::path::Path;
-use std::ffi::OsStr;
 
 pub(crate) struct TempPipe {
     pipe: Pipe,
@@ -26,7 +24,7 @@ impl Drop for TempPipe {
     fn drop(&mut self) {
         match fs::remove_file(&self.pipe.path()) {
             Ok(_) => println!("Successfully removed the named pipe: {}", &self.pipe.path().display()),
-            Err(e) => eprintln!("Failed to remove the named pipe: {}", &self.pipe.path().display()),
+            Err(_e) => eprintln!("Failed to remove the named pipe: {}", &self.pipe.path().display()),
         }
     }
 }

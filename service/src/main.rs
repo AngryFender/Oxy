@@ -3,7 +3,7 @@ mod temppipe;
 use std::collections::VecDeque;
 use temppipe::TempPipe;
 use ipipe::{Pipe};
-use std::io::{BufRead, BufReader, Error, ErrorKind};
+use std::io::{BufRead, BufReader};
 use std::thread;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -33,42 +33,42 @@ fn main() {
     });
 
     let command_list_consume = Arc::clone(&command_list);
-    let instructThread = thread::spawn(move ||{
+    let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
-           let argsCollection: Vec<&str> = instruction.split(";;").collect();
+           let args_collection: Vec<&str> = instruction.split(";;").collect();
 
-           if(argsCollection.len()!=2) {
+           if args_collection.len()!=2 {
                continue;
            }
 
-           println!("Requested instruction : {}", argsCollection[0]);
+           println!("Requested instruction : {}", args_collection[0]);
 
-           if argsCollection[0] == "status"{
-                let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
-                let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
+           if args_collection[0] == "status"{
+                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
-                let mut command_list = command_list_consume.lock().unwrap();
-                writeln!(&mut outputPipe,"\nTotal commands: {}",command_list.len()).unwrap();
-                writeln!(&mut outputPipe,"==========================================").unwrap();
+                let command_list = command_list_consume.lock().unwrap();
+                writeln!(&mut output_pipe, "\nTotal commands: {}", command_list.len()).unwrap();
+                writeln!(&mut output_pipe, "==========================================").unwrap();
 
                 let mut count = 0;
                 for command in command_list.iter(){
-                    let argsCollection: Vec<&str> = command.split(";;").collect();
+                    let args_collection: Vec<&str> = command.split(";;").collect();
 
-                    if(argsCollection.len()!=2){
+                    if args_collection.len()!=2 {
                         continue;
                     }
 
                     if count == 0 {
-                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, argsCollection[1], argsCollection[0].to_string(), RESET);
-                        writeln!(&mut outputPipe,"{}", formatted).unwrap();
+                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, args_collection[1], args_collection[0].to_string(), RESET);
+                        writeln!(&mut output_pipe, "{}", formatted).unwrap();
                     }else{
-                        writeln!(&mut outputPipe,"{}  PID:{}  \"{}\"",count+1, argsCollection[1], argsCollection[0].to_string()).unwrap();
+                        writeln!(&mut output_pipe, "{}  PID:{}  \"{}\"", count+1, args_collection[1], args_collection[0].to_string()).unwrap();
                     }
                     count += 1;
                 }
-                writeln!(&mut outputPipe,"==========================================").unwrap();
-                writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
+                writeln!(&mut output_pipe, "==========================================").unwrap();
+                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }
        }
 
@@ -91,20 +91,20 @@ fn main() {
 
     let command_list_pop = Arc::clone(&command_list);
     let current_command_output_update = Arc::clone(&current_command_output);
-    let threadConsumer = thread::spawn(move || {
+    let thread_consumer = thread::spawn(move || {
         let command_rx_clone = command_rx.clone();
         for command in command_rx_clone {
-            let argsCollection: Vec<&str> = command.split(";;").collect();
+            let args_collection: Vec<&str> = command.split(";;").collect();
 
-            if(argsCollection.len()!=2){
+            if args_collection.len()!=2 {
                 continue;
             }
 
-            println!("Client pid: {} : Requested command : {}",argsCollection[1], argsCollection[0]);
+            println!("Client pid: {} : Requested command : {}", args_collection[1], args_collection[0]);
 
             let process = Command::new("sh")
                 .arg("-c")
-                .arg(argsCollection[0])
+                .arg(args_collection[0])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn();
@@ -112,18 +112,18 @@ fn main() {
             let stdout = process.unwrap().stdout.expect("Failed to capture stdout");
             let reader = BufReader::new(stdout).lines();
 
-            let outputPipeName: String = "oxy_pip_output_".to_string() + &argsCollection[1];
-            let mut outputPipe = Pipe::with_name(&outputPipeName).unwrap();
+            let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+            let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
             reader.for_each(|line|{
                 let mut current_output = current_command_output_update.lock().unwrap();
                 let str_line = String::from(line.unwrap());
                     current_output.push_back(str_line.clone());
                     println!("{}",str_line);
-                    writeln!(&mut outputPipe,"{}", str_line).unwrap();
+                    writeln!(&mut output_pipe, "{}", str_line).unwrap();
             });
 
-            writeln!(&mut outputPipe,"{}", "Oxy-over").unwrap();
+            writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
 
             if let Ok(mut list )= command_list_pop.lock(){
                 list.pop_front();
@@ -132,4 +132,6 @@ fn main() {
     });
     let _ = thread_instruction_producer.join();
     let _ = thread_command_producer.join();
+    let _ = thread_consumer.join();
+    let _ = thread_instruct.join();
 }

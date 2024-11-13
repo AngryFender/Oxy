@@ -1,12 +1,9 @@
 mod temppipe;
 use temppipe::TempPipe;
-use std::fs;
-use std::io;
 use std::env;
 use std::io::BufRead;
-use ipipe::{pprint, Pipe};
+use ipipe::{Pipe};
 use std::io::Write;
-use std::process::Command;
 use sysinfo::get_current_pid;
 
 fn main() {
@@ -20,11 +17,11 @@ fn main() {
         return;
     }
 
-    let mut currentPid = String::new();
+    let mut current_pid = String::new();
     match get_current_pid() {
         Ok(pid) => {
-            currentPid = format!("{}",pid);
-            println!("current pid: {}", currentPid);
+            current_pid = format!("{}", pid);
+            println!("current pid: {}", current_pid);
         }
         Err(e) => {
             println!("failed to get current pid: {}", e);
@@ -37,15 +34,15 @@ fn main() {
         "run" => {
             pipe = Pipe::with_name("oxy_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", args[2], ";;", currentPid).unwrap();
-                println!("{}{}{}", args[2], ";;", currentPid);
+                writeln!(p, "{}{}{}", args[2], ";;", current_pid).unwrap();
+                println!("{}{}{}", args[2], ";;", current_pid);
             }
         },
         "status" => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                println!("{}{}{}", "status", ";;", currentPid);
-                writeln!(p, "{}{}{}", "status", ";;", currentPid).unwrap();
+                println!("{}{}{}", "status", ";;", current_pid);
+                writeln!(p, "{}{}{}", "status", ";;", current_pid).unwrap();
             }
         },
         _ =>{
@@ -53,15 +50,15 @@ fn main() {
         }
     }
 
-    let outputPipeName: String = "oxy_pip_output_".to_string() + &currentPid;
-    let mut outputPipe = TempPipe::new(&outputPipeName);
-    for line in std::io::BufReader::new(outputPipe.get_pipe()).lines(){
-        let lineOutput: String = line.unwrap();
-        match lineOutput == "Oxy-over" {
+    let output_pipe_name: String = "oxy_pip_output_".to_string() + &current_pid;
+    let mut output_pipe = TempPipe::new(&output_pipe_name);
+    for line in std::io::BufReader::new(output_pipe.get_pipe()).lines(){
+        let line_output: String = line.unwrap();
+        match line_output == "Oxy-over" {
             true => {
                 break; }
             false => {
-                println!(" ↲ {}", lineOutput);
+                println!(" ↳ {}", line_output);
             }
         }
     }
