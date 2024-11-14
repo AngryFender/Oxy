@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader};
 use std::thread;
 use std::io::Write;
 use std::process::{Command, Stdio};
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{unbounded, Receiver};
 use std::sync::{mpsc, Arc, Mutex};
 
 // ANSI escape codes for colors
@@ -15,7 +15,7 @@ const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
 const RESET: &str = "\x1b[0m";
 
-fn main() {
+fn main()  {
     println!("Starting oxyd service...");
 
     let (command_tx,command_rx) = unbounded();
@@ -91,47 +91,58 @@ fn main() {
 
     let command_list_pop = Arc::clone(&command_list);
     let current_command_output_update = Arc::clone(&current_command_output);
-    let thread_consumer = thread::spawn(move || {
-        let command_rx_clone = command_rx.clone();
-        for command in command_rx_clone {
-            let args_collection: Vec<&str> = command.split(";;").collect();
-
-            if args_collection.len()!=2 {
-                continue;
+    let thread_consumer = thread::spawn(move ||
+        {
+            match spawn_child_process(command_rx, current_command_output_update, command_list_pop){
+                Ok(_)=>println!(""),
+                Err(e)=>eprintln!("Error: {}", e),
             }
-
-            println!("Client pid: {} : Requested command : {}", args_collection[1], args_collection[0]);
-
-            let process = Command::new("sh")
-                .arg("-c")
-                .arg(args_collection[0])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn();
-
-            let stdout = process.unwrap().stdout.expect("Failed to capture stdout");
-            let reader = BufReader::new(stdout).lines();
-
-            let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
-            let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-
-            reader.for_each(|line|{
-                let mut current_output = current_command_output_update.lock().unwrap();
-                let str_line = String::from(line.unwrap());
-                    current_output.push_back(str_line.clone());
-                    println!("{}",str_line);
-                    writeln!(&mut output_pipe, "{}", str_line).unwrap();
-            });
-
-            writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-
-            if let Ok(mut list )= command_list_pop.lock(){
-                list.pop_front();
-            }
-        };
-    });
+        });
     let _ = thread_instruction_producer.join();
     let _ = thread_command_producer.join();
     let _ = thread_consumer.join();
     let _ = thread_instruct.join();
+
+}
+
+fn spawn_child_process(command_rx:Receiver<String>,current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_list_pop: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
+    let command_rx_clone = command_rx.clone();
+    for command in command_rx_clone {
+        let args_collection: Vec<&str> = command.split(";;").collect();
+
+        if args_collection.len()!=2 {
+            continue;
+        }
+
+        println!("Client pid: {} : Requested command : {}", args_collection[1], args_collection[0]);
+
+        let process = Command::new("sh")
+            .arg("-c")
+            .arg(args_collection[0])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let stdout = process.stdout.expect("Failed to capture stdout");
+        let reader = BufReader::new(stdout).lines();
+
+        let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+        let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
+
+        reader.for_each(|line|{
+            let mut current_output = current_command_output_update.lock().unwrap();
+            let str_line = String::from(line.unwrap());
+            current_output.push_back(str_line.clone());
+            println!("{}",str_line);
+            writeln!(&mut output_pipe, "{}", str_line).unwrap();
+        });
+
+        writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+
+        if let Ok(mut list )= command_list_pop.lock(){
+            list.pop_front();
+        }
+    };
+
+    Ok(())
 }
