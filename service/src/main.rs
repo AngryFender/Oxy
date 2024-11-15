@@ -124,19 +124,27 @@ fn spawn_child_process(command_rx:Receiver<String>,current_command_output_update
             .spawn()?;
 
         let stdout = process.stdout.expect("Failed to capture stdout");
-        let reader = BufReader::new(stdout).lines();
+        let stderr = process.stderr.expect("Failed to capture stdout");
+        let stdout_reader = BufReader::new(stdout).lines();
+        let stderr_reader = BufReader::new(stderr).lines();
 
         let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
         let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
-        reader.for_each(|line|{
+        stdout_reader.for_each(|line|{
             let mut current_output = current_command_output_update.lock().unwrap();
             let str_line = String::from(line.unwrap());
             current_output.push_back(str_line.clone());
             println!("{}",str_line);
             writeln!(&mut output_pipe, "{}", str_line).unwrap();
         });
-
+        stderr_reader.for_each(|line|{
+            let mut current_output = current_command_output_update.lock().unwrap();
+            let str_line = String::from(line.unwrap());
+            current_output.push_back(str_line.clone());
+            println!("{}",str_line);
+            writeln!(&mut output_pipe, "{}{}{}",RED, str_line,RESET).unwrap();
+        });
         writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
 
         if let Ok(mut list )= command_list_pop.lock(){
