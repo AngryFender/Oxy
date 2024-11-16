@@ -32,6 +32,7 @@ fn main()  {
         }
     });
 
+    let current_command_stdout_output = Arc::clone(&current_command_output);
     let command_list_consume = Arc::clone(&command_list);
     let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
@@ -69,9 +70,27 @@ fn main()  {
                 }
                 writeln!(&mut output_pipe, "==========================================").unwrap();
                 writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+           }else if args_collection[0] == "current"{
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
+
+               let current_output = current_command_stdout_output.lock().unwrap();
+               let command_list = command_list_consume.lock().unwrap();
+               writeln!(&mut output_pipe, "\n Current stdout: {}", command_list.len()).unwrap();
+               writeln!(&mut output_pipe, "==========================================").unwrap();
+
+               if command_list.len() == 0{
+                   writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+                   continue;
+               }
+               for line in current_output.iter(){
+                   //let args_collection: Vec<&str> = command_list.front().unwrap().split(";;").collect();
+                   writeln!(&mut output_pipe, "{}", line).unwrap();
+               }
+               writeln!(&mut output_pipe, "==========================================").unwrap();
+               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }
        }
-
     });
 
     let command_list_update = Arc::clone(&command_list);
