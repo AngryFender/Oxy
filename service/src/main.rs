@@ -91,6 +91,13 @@ fn main()  {
                }
                writeln!(&mut output_pipe, "==========================================").unwrap();
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+           }else if args_collection[0] == "kill"{
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[2];
+               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
+
+
+
+
            }
        }
     });

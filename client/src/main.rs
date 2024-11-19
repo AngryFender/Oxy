@@ -55,7 +55,7 @@ fn main() {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
                 println!("{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid);
-//                writeln!(p, "{}{}{}{}", "kill",args[2], ";;", current_pid).unwrap();
+                writeln!(p, "{}{}{}{}", "kill",args[2], ";;", current_pid).unwrap();
             }
         },        _ =>{
             println!("unknown command");
