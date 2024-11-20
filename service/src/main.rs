@@ -7,7 +7,7 @@ use ipipe::{Pipe};
 use std::io::{BufRead, BufReader};
 use std::thread;
 use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use crossbeam_channel::{unbounded, Receiver};
 use std::sync::{mpsc, Arc, Mutex};
 use childprocess::spawn_child_process;
@@ -24,6 +24,7 @@ fn main()  {
     let (instruction_tx,instruction_rx) = mpsc::channel();
     let command_list = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
+    let child_arc: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
 
     let thread_instruction_producer = thread::spawn( move  || {
         let mut instruction_pipe = TempPipe::new("oxy_instruction_pipe");
@@ -119,9 +120,10 @@ fn main()  {
 
     let command_list_pop = Arc::clone(&command_list);
     let current_command_output_update = Arc::clone(&current_command_output);
+    let child_arc_clone = Arc::clone(&child_arc);
     let thread_consumer = thread::spawn(move ||
         {
-            match spawn_child_process(command_rx, current_command_output_update, command_list_pop){
+            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_list_pop){
                 Ok(_)=>println!(""),
                 Err(e)=>eprintln!("Error: {}", e),
             }

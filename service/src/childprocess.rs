@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 use std::io::{Write, BufRead, BufReader};
-use std::process::{Command, Stdio};
+use std::process::{Command, Stdio, Child};
 use std::sync::{Arc, Mutex};
 use crossbeam_channel::Receiver;
 use ipipe::Pipe;
 use crate::{RED, RESET};
 
-pub(crate) fn spawn_child_process(command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_list_pop: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
+pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_list_pop: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
     let command_rx_clone = command_rx.clone();
     for command in command_rx_clone {
         let args_collection: Vec<&str> = command.split(";;").collect();
@@ -17,15 +17,20 @@ pub(crate) fn spawn_child_process(command_rx:Receiver<String>, current_command_o
 
         println!("Client pid: {} : Requested command : {}", args_collection[1], args_collection[0]);
 
-        let process = Command::new("sh")
+        let mut process = Command::new("sh")
             .arg("-c")
             .arg(args_collection[0])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
 
-        let stdout = process.stdout.expect("Failed to capture stdout");
-        let stderr = process.stderr.expect("Failed to capture stdout");
+
+        let stdout = process.stdout.take().expect("Failed to capture stdout");
+        let stderr = process.stderr.take().expect("Failed to capture stdout");
+        {
+            let mut child_arc_guard = child_arc_clone.lock().unwrap();
+            *child_arc_guard = Some(process);
+        }
         let stdout_reader = BufReader::new(stdout).lines();
         let stderr_reader = BufReader::new(stderr).lines();
 
