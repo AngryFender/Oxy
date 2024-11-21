@@ -7,6 +7,7 @@ use ipipe::{Pipe};
 use std::io::{BufRead, BufReader};
 use std::thread;
 use std::io::Write;
+use std::ops::DerefMut;
 use std::process::{Child, Command, Stdio};
 use crossbeam_channel::{unbounded, Receiver};
 use std::sync::{mpsc, Arc, Mutex};
@@ -37,11 +38,12 @@ fn main()  {
 
     let current_command_stdout_output = Arc::clone(&current_command_output);
     let command_list_consume = Arc::clone(&command_list);
+    let child_arc_copy = Arc::clone(&child_arc);
     let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
            let args_collection: Vec<&str> = instruction.split(";;").collect();
 
-           if args_collection.len()!=2 {
+           if args_collection.len()<1 {
                continue;
            }
 
@@ -93,12 +95,14 @@ fn main()  {
                writeln!(&mut output_pipe, "==========================================").unwrap();
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }else if args_collection[0] == "kill"{
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[2];
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
+               println!("Killing child process...");
 
+               let mut child_arc_guard = child_arc_copy.lock().unwrap();
+               child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
 
-
-
+               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }
        }
     });

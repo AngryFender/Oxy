@@ -51,13 +51,16 @@ fn main() {
                 println!("{}{}{}", "current", ";;", current_pid);
                 writeln!(p, "{}{}{}", "current", ";;", current_pid).unwrap();
             }
-        },"kill" => {
+        },
+        "kill" => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                println!("{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid);
-                writeln!(p, "{}{}{}{}", "kill",args[2], ";;", current_pid).unwrap();
+                //println!("{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid);
+                //writeln!(p, "{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid).unwrap();
+                println!("{}{}{}", "kill", ";;", current_pid);
+                writeln!(p, "{}{}{}", "kill", ";;", current_pid).unwrap();
             }
-        },        _ =>{
+        },_ =>{
             println!("unknown command");
         }
     }
