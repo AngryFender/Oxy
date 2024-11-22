@@ -5,63 +5,68 @@ use std::io::BufRead;
 use ipipe::{Pipe};
 use std::io::Write;
 use sysinfo::get_current_pid;
+use clap::{Parser, Subcommand};
+
+#[derive(Parser, Debug)]
+#[command(version,
+    about = "A cli tool to run bash commands synchronously",
+    long_about = None,
+)]
+struct Cli {
+    #[command[subcommand]]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    run {command: String},
+    status {},
+    current{},
+    kill{},
+}
 
 fn main() {
     if env::consts::OS != "linux" {
         return;
     }
-    println!("Starting, Oxy!");
 
-    let args: Vec<String> = env::args().collect();
-    if args.len() <2{
-        return;
-    }
-
+    let mut pipe:Option<Pipe> = None;
     let mut current_pid = String::new();
     match get_current_pid() {
         Ok(pid) => {
             current_pid = format!("{}", pid);
-            println!("current pid: {}", current_pid);
         }
         Err(e) => {
-            println!("failed to get current pid: {}", e);
+            println!("Failed to get current pid: {}", e);
+            return;
         }
     }
 
-    let mut pipe:Option<Pipe> = None;
-    match args[1].as_str()
-    {
-        "run" => {
+    let cli = Cli::parse();
+    match cli.command {
+        Commands::run{command} => {
             pipe = Pipe::with_name("oxy_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", args[2], ";;", current_pid).unwrap();
-                println!("{}{}{}", args[2], ";;", current_pid);
+                writeln!(p, "{}{}{}", command, ";;", current_pid).unwrap();
             }
-        },
-        "status" => {
+        }
+        Commands::status{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                println!("{}{}{}", "status", ";;", current_pid);
                 writeln!(p, "{}{}{}", "status", ";;", current_pid).unwrap();
             }
-        },
-        "current" => {
+        }
+        Commands::current{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                println!("{}{}{}", "current", ";;", current_pid);
                 writeln!(p, "{}{}{}", "current", ";;", current_pid).unwrap();
             }
-        },
-        "kill" => {
+        }
+        Commands::kill{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                //println!("{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid);
-                //writeln!(p, "{}{}{}{}{}", "kill",";;",args[2], ";;", current_pid).unwrap();
                 println!("{}{}{}", "kill", ";;", current_pid);
-                writeln!(p, "{}{}{}", "kill", ";;", current_pid).unwrap();
             }
-        },_ =>{
-            println!("unknown command");
         }
     }
 
