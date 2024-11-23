@@ -23,6 +23,7 @@ enum Commands {
     status {},
     current{},
     kill{},
+    remove{},
 }
 
 fn main() {
@@ -66,6 +67,12 @@ fn main() {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
                 println!("{}{}{}", "kill", ";;", current_pid);
+            }
+        }
+        Commands::remove{} => {
+            pipe = Pipe::with_name("oxy_instruction_pipe").ok();
+            if let Some(ref mut p) = pipe {
+                println!("{}{}{}", "remove", ";;", current_pid);
             }
         }
     }
