@@ -23,7 +23,7 @@ enum Commands {
     status {},
     current{},
     kill{},
-    remove{},
+    remove{ pids: String},
 }
 
 fn main() {
@@ -66,13 +66,18 @@ fn main() {
         Commands::kill{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                println!("{}{}{}", "kill", ";;", current_pid);
+                writeln!(p,"{}{}{}", "kill", ";;", current_pid).unwrap();
             }
         }
-        Commands::remove{} => {
-            pipe = Pipe::with_name("oxy_instruction_pipe").ok();
-            if let Some(ref mut p) = pipe {
-                println!("{}{}{}", "remove", ";;", current_pid);
+        Commands::remove{pids} => {
+            if pids.chars().all(|c| c.is_digit(10) || c == ',') {
+                pipe = Pipe::with_name("oxy_instruction_pipe").ok();
+                if let Some(ref mut p) = pipe {
+                    println!("{}{}{}{}{}", "remove", ";;",pids,";;", current_pid);
+                }
+            }else{
+                eprintln!("Oxy: Syntax error, only digits are accepted for pids");
+                return;
             }
         }
     }
