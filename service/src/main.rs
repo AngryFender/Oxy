@@ -103,6 +103,17 @@ fn main()  {
                child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
 
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+           }else if args_collection[0] == "remove"{
+               let command_list = command_list_consume.lock().unwrap();
+               let remove_list = args_collection[1].split(",").collect::<Vec<&str>>();
+               for pid in remove_list.iter(){
+                   println!("Removing child process {}", pid);
+               }
+
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[2];
+               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
+               writeln!(&mut output_pipe, "Removing process from queue: {}",args_collection[1]).unwrap();
+               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }
        }
     });

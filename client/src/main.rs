@@ -73,7 +73,7 @@ fn main() {
             if pids.chars().all(|c| c.is_digit(10) || c == ',') {
                 pipe = Pipe::with_name("oxy_instruction_pipe").ok();
                 if let Some(ref mut p) = pipe {
-                    println!("{}{}{}{}{}", "remove", ";;",pids,";;", current_pid);
+                    writeln!(p,"{}{}{}{}{}", "remove", ";;", pids, ";;", current_pid).unwrap();
                 }
             }else{
                 eprintln!("Oxy: Syntax error, only digits are accepted for pids");
