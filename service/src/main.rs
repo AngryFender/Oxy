@@ -1,5 +1,6 @@
 mod temppipe;
 mod childprocess;
+mod commandentry;
 
 use std::collections::VecDeque;
 use temppipe::TempPipe;
