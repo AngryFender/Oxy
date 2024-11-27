@@ -13,6 +13,7 @@ use std::process::{Child, Command, Stdio};
 use crossbeam_channel::{unbounded, Receiver};
 use std::sync::{mpsc, Arc, Mutex};
 use childprocess::spawn_child_process;
+use crate::commandentry::CommandEntry;
 
 // ANSI escape codes for colors
 const RED: &str = "\x1b[31m";
@@ -25,6 +26,7 @@ fn main()  {
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
     let command_list = Arc::new(Mutex::new(VecDeque::<String>::new()));
+    let command_entries = Arc::new(Mutex::new(VecDeque::<CommandEntry>::new()));
     let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let child_arc: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
 
@@ -120,15 +122,25 @@ fn main()  {
     });
 
     let command_list_update = Arc::clone(&command_list);
+    let command_entry_add = Arc::clone(&command_entries);
     let thread_command_producer = thread::spawn( move  || {
         let mut command_pipe = TempPipe::new("oxy_pipe");
         println!("Listening commands on: {}", command_pipe.get_path().display());
         let command_tx_clone = command_tx.clone();
         for line in std::io::BufReader::new(command_pipe.get_pipe()).lines(){
-            let command = String::from(line.unwrap());
-            command_tx_clone.send(command.clone()).unwrap();
+            let line = String::from(line.unwrap());
+            let args: Vec<&str> = line.split(";;").collect();
+
+            if args.len()!=2 {
+                continue;
+            }
+
+            let mut command_entry_add_guard = command_entry_add.lock().unwrap();
+            command_entry_add_guard.push_back(CommandEntry::new(args[0].to_string(), args[1].to_string()));
+
+            command_tx_clone.send(line.clone()).unwrap();
             let mut command_list_guard = command_list_update.lock().unwrap();
-            command_list_guard.push_back(command);
+            command_list_guard.push_back(line);
         }
     });
 
