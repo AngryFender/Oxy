@@ -5,8 +5,9 @@ use std::sync::{Arc, Mutex};
 use crossbeam_channel::Receiver;
 use ipipe::Pipe;
 use crate::{RED, RESET};
+use crate::commandentry::CommandEntry;
 
-pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_list_pop: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
+pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_entry_pop: Arc<Mutex<VecDeque<CommandEntry>>>) -> std::io::Result<()> {
     let command_rx_clone = command_rx.clone();
     for command in command_rx_clone {
         let args_collection: Vec<&str> = command.split(";;").collect();
@@ -41,19 +42,19 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
             let mut current_output = current_command_output_update.lock().unwrap();
             let str_line = String::from(line.unwrap());
             current_output.push_back(str_line.clone());
-            println!("{}",str_line);
+            //println!("{}",str_line);
             writeln!(&mut output_pipe, "{}", str_line).unwrap();
         });
         stderr_reader.for_each(|line|{
             let mut current_output = current_command_output_update.lock().unwrap();
             let str_line = String::from(line.unwrap());
             current_output.push_back(str_line.clone());
-            println!("{}",str_line);
+            //println!("{}",str_line);
             writeln!(&mut output_pipe, "{}{}{}",RED, str_line,RESET).unwrap();
         });
         writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
 
-        if let Ok(mut list )= command_list_pop.lock(){
+        if let Ok(mut list )= command_entry_pop.lock(){
             list.pop_front();
         }
     };

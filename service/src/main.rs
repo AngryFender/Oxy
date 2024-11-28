@@ -25,7 +25,6 @@ fn main()  {
 
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
-    let command_list = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let command_entries = Arc::new(Mutex::new(VecDeque::<CommandEntry>::new()));
     let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let child_arc: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
@@ -40,7 +39,7 @@ fn main()  {
     });
 
     let current_command_stdout_output = Arc::clone(&current_command_output);
-    let command_list_consume = Arc::clone(&command_list);
+    let command_entry_manage = Arc::clone(&command_entries);
     let child_arc_copy = Arc::clone(&child_arc);
     let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
@@ -56,23 +55,17 @@ fn main()  {
                 let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
                 let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
-                let command_list = command_list_consume.lock().unwrap();
-                writeln!(&mut output_pipe, "\nTotal commands: {}", command_list.len()).unwrap();
+                let command_entries = command_entry_manage.lock().unwrap();
+                writeln!(&mut output_pipe, "\nTotal commands: {}", command_entries.len()).unwrap();
                 writeln!(&mut output_pipe, "==========================================").unwrap();
 
                 let mut count = 0;
-                for command in command_list.iter(){
-                    let args_collection: Vec<&str> = command.split(";;").collect();
-
-                    if args_collection.len()!=2 {
-                        continue;
-                    }
-
+                for entry in command_entries.iter(){
                     if count == 0 {
-                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, args_collection[1], args_collection[0].to_string(), RESET);
+                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, entry.get_pid(),entry.get_command(), RESET);
                         writeln!(&mut output_pipe, "{}", formatted).unwrap();
                     }else{
-                        writeln!(&mut output_pipe, "{}  PID:{}  \"{}\"", count+1, args_collection[1], args_collection[0].to_string()).unwrap();
+                        writeln!(&mut output_pipe, "{}  PID:{}  \"{}\"", count+1, entry.get_pid(),entry.get_command()).unwrap();
                     }
                     count += 1;
                 }
@@ -83,11 +76,11 @@ fn main()  {
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
                let current_output = current_command_stdout_output.lock().unwrap();
-               let command_list = command_list_consume.lock().unwrap();
-               writeln!(&mut output_pipe, "\n Current stdout: {}", command_list.len()).unwrap();
+               let command_entries = command_entry_manage.lock().unwrap();
+               writeln!(&mut output_pipe, "\n Current stdout: {}", command_entries.len()).unwrap();
                writeln!(&mut output_pipe, "==========================================").unwrap();
 
-               if command_list.len() == 0{
+               if command_entries.len() == 0{
                    writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
                    continue;
                }
@@ -107,7 +100,7 @@ fn main()  {
 
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }else if args_collection[0] == "remove"{
-               let command_list = command_list_consume.lock().unwrap();
+               let command_entries = command_entry_manage.lock().unwrap();
                let remove_list = args_collection[1].split(",").collect::<Vec<&str>>();
                for pid in remove_list.iter(){
                    println!("Removing child process {}", pid);
@@ -121,7 +114,6 @@ fn main()  {
        }
     });
 
-    let command_list_update = Arc::clone(&command_list);
     let command_entry_add = Arc::clone(&command_entries);
     let thread_command_producer = thread::spawn( move  || {
         let mut command_pipe = TempPipe::new("oxy_pipe");
@@ -137,21 +129,16 @@ fn main()  {
 
             let mut command_entry_add_guard = command_entry_add.lock().unwrap();
             command_entry_add_guard.push_back(CommandEntry::new(args[0].to_string(), args[1].to_string()));
-
             command_tx_clone.send(line.clone()).unwrap();
-            let mut command_list_guard = command_list_update.lock().unwrap();
-            command_list_guard.push_back(line);
         }
     });
 
-
-
-    let command_list_pop = Arc::clone(&command_list);
+    let command_entry_pop = Arc::clone(&command_entries);
     let current_command_output_update = Arc::clone(&current_command_output);
     let child_arc_clone = Arc::clone(&child_arc);
     let thread_consumer = thread::spawn(move ||
         {
-            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_list_pop){
+            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_entry_pop){
                 Ok(_)=>println!(""),
                 Err(e)=>eprintln!("Error: {}", e),
             }
