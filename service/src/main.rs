@@ -51,16 +51,16 @@ fn main()  {
 
            println!("Requested instruction : {}", args_collection[0]);
 
+           let mut entries = command_entry_manage.lock().unwrap();
            if args_collection[0] == "status"{
                 let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
                 let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
-                let command_entries = command_entry_manage.lock().unwrap();
-                writeln!(&mut output_pipe, "\nTotal commands: {}", command_entries.len()).unwrap();
+                writeln!(&mut output_pipe, "\nTotal commands: {}", entries.len()).unwrap();
                 writeln!(&mut output_pipe, "==========================================").unwrap();
 
                 let mut count = 0;
-                for entry in command_entries.iter(){
+                for entry in entries.iter(){
                     if count == 0 {
                         let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, entry.get_pid(),entry.get_command(), RESET);
                         writeln!(&mut output_pipe, "{}", formatted).unwrap();
@@ -76,11 +76,10 @@ fn main()  {
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
                let current_output = current_command_stdout_output.lock().unwrap();
-               let command_entries = command_entry_manage.lock().unwrap();
-               writeln!(&mut output_pipe, "\n Current stdout: {}", command_entries.len()).unwrap();
+               writeln!(&mut output_pipe, "\n Current stdout: {}", entries.len()).unwrap();
                writeln!(&mut output_pipe, "==========================================").unwrap();
 
-               if command_entries.len() == 0{
+               if entries.len() == 0{
                    writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
                    continue;
                }
@@ -93,17 +92,21 @@ fn main()  {
            }else if args_collection[0] == "kill"{
                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-               println!("Killing child process...");
 
-               let mut child_arc_guard = child_arc_copy.lock().unwrap();
-               child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
+               if entries.len() > 0 {
+                   println!("Killing child process...");
+                   let mut child_arc_guard = child_arc_copy.lock().unwrap();
+                   child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
+               }
 
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }else if args_collection[0] == "remove"{
-               let command_entries = command_entry_manage.lock().unwrap();
                let remove_list = args_collection[1].split(",").collect::<Vec<&str>>();
                for pid in remove_list.iter(){
                    println!("Removing child process {}", pid);
+                   if let Some(index) = entries.iter().position(|entry| entry.get_pid() == *pid){
+                       entries.remove(index);
+                   }
                }
 
                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[2];
