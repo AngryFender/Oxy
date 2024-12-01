@@ -22,6 +22,7 @@ enum Commands {
     run {command: String},
     status {},
     current{},
+    last{},
     kill{},
     remove{ pids: String},
 }
@@ -61,6 +62,12 @@ fn main() {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
                 writeln!(p, "{}{}{}", "current", ";;", current_pid).unwrap();
+            }
+        }
+        Commands::last {} =>{
+            pipe = Pipe::with_name("oxy_instruction_pipe").ok();
+            if let Some(ref mut p) = pipe {
+                writeln!(p, "{}{}{}", "last", ";;", current_pid).unwrap();
             }
         }
         Commands::kill{} => {

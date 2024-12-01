@@ -27,6 +27,7 @@ fn main()  {
     let (instruction_tx,instruction_rx) = mpsc::channel();
     let command_entries = Arc::new(Mutex::new(VecDeque::<CommandEntry>::new()));
     let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
+    let last_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let child_arc: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
 
     let thread_instruction_producer = thread::spawn( move  || {
@@ -43,17 +44,17 @@ fn main()  {
     let child_arc_copy = Arc::clone(&child_arc);
     let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
-           let args_collection: Vec<&str> = instruction.split(";;").collect();
+           let args: Vec<&str> = instruction.split(";;").collect();
 
-           if args_collection.len()<1 {
+           if args.len()<1 {
                continue;
            }
 
-           println!("Requested instruction : {}", args_collection[0]);
+           println!("Requested instruction : {}", args[0]);
 
            let mut entries = command_entry_manage.lock().unwrap();
-           if args_collection[0] == "status"{
-                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+           if args[0] == "status"{
+                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
                 let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
                 writeln!(&mut output_pipe, "\nTotal commands: {}", entries.len()).unwrap();
@@ -71,8 +72,8 @@ fn main()  {
                 }
                 writeln!(&mut output_pipe, "==========================================").unwrap();
                 writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args_collection[0] == "current"{
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+           }else if args[0] == "current"{
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
                let current_output = current_command_stdout_output.lock().unwrap();
@@ -89,8 +90,11 @@ fn main()  {
                }
                writeln!(&mut output_pipe, "==========================================").unwrap();
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args_collection[0] == "kill"{
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+           }else if args[0] == "last"{
+
+           }
+           else if args[0] == "kill"{
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
                if entries.len() > 0 {
@@ -100,8 +104,8 @@ fn main()  {
                }
 
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args_collection[0] == "remove"{
-               let remove_list = args_collection[1].split(",").collect::<Vec<&str>>();
+           }else if args[0] == "remove"{
+               let remove_list = args[1].split(",").collect::<Vec<&str>>();
                for pid in remove_list.iter(){
                    println!("Removing child process {}", pid);
                    if let Some(index) = entries.iter().position(|entry| entry.get_pid() == *pid){
@@ -109,9 +113,9 @@ fn main()  {
                    }
                }
 
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[2];
+               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[2];
                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-               writeln!(&mut output_pipe, "Removing process from queue: {}",args_collection[1]).unwrap();
+               writeln!(&mut output_pipe, "Removing process from queue: {}", args[1]).unwrap();
                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
            }
        }
