@@ -1,5 +1,3 @@
-use ipipe::Pipe;
-
 pub(crate) struct CommandEntry {
     command: String,
     pid: String

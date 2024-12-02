@@ -8,19 +8,20 @@ use crate::{RED, RESET};
 use crate::commandentry::CommandEntry;
 
 pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_entry_pop: Arc<Mutex<VecDeque<CommandEntry>>>) -> std::io::Result<()> {
-    let command_rx_clone = command_rx.clone();
-    for command in command_rx_clone {
-        let args_collection: Vec<&str> = command.split(";;").collect();
+    for line in command_rx.clone() {
+        let args: Vec<&str> = line.split(";;").collect();
 
-        if args_collection.len()!=2 {
+        if args.len()!=2 {
             continue;
         }
+        let pid = args[0];
+        let command = args[1];
 
-        println!("Client pid: {} : Requested command : {}", args_collection[1], args_collection[0]);
+        println!("Client@{} command ← {}", pid, command);
 
         let mut process = Command::new("sh")
             .arg("-c")
-            .arg(args_collection[0])
+            .arg(command)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
@@ -35,7 +36,7 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
         let stdout_reader = BufReader::new(stdout).lines();
         let stderr_reader = BufReader::new(stderr).lines();
 
-        let output_pipe_name: String = "oxy_pip_output_".to_string() + &args_collection[1];
+        let output_pipe_name: String = "oxy_pip_output_".to_string() + pid;
         let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
         stdout_reader.for_each(|line|{

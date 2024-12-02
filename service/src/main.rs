@@ -5,12 +5,12 @@ mod commandentry;
 use std::collections::VecDeque;
 use temppipe::TempPipe;
 use ipipe::{Pipe};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead};
 use std::thread;
 use std::io::Write;
 use std::ops::DerefMut;
-use std::process::{Child, Command, Stdio};
-use crossbeam_channel::{unbounded, Receiver};
+use std::process::{Child};
+use crossbeam_channel::{unbounded};
 use std::sync::{mpsc, Arc, Mutex};
 use childprocess::spawn_child_process;
 use crate::commandentry::CommandEntry;
@@ -50,75 +50,67 @@ fn main()  {
                continue;
            }
 
-           println!("Requested instruction : {}", args[0]);
+           let pid = args[0];
+           let instruct = args[1];
 
+           println!("instruction ← {}", args[1]);
+
+           let output_pipe_name: String = "oxy_pip_output_".to_string() + pid;
+           let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
            let mut entries = command_entry_manage.lock().unwrap();
-           if args[0] == "status"{
-                let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
-                let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
-                writeln!(&mut output_pipe, "\nTotal commands: {}", entries.len()).unwrap();
-                writeln!(&mut output_pipe, "==========================================").unwrap();
+           match instruct{
+               "status" => {
+                   writeln!(&mut output_pipe, "\nTotal commands: {}", entries.len()).unwrap();
+                   writeln!(&mut output_pipe, "==========================================").unwrap();
 
-                let mut count = 0;
-                for entry in entries.iter(){
-                    if count == 0 {
-                        let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, entry.get_pid(),entry.get_command(), RESET);
-                        writeln!(&mut output_pipe, "{}", formatted).unwrap();
-                    }else{
-                        writeln!(&mut output_pipe, "{}  PID:{}  \"{}\"", count+1, entry.get_pid(),entry.get_command()).unwrap();
-                    }
-                    count += 1;
-                }
-                writeln!(&mut output_pipe, "==========================================").unwrap();
-                writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args[0] == "current"{
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
-               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-
-               let current_output = current_command_stdout_output.lock().unwrap();
-               writeln!(&mut output_pipe, "\n Current stdout: {}", entries.len()).unwrap();
-               writeln!(&mut output_pipe, "==========================================").unwrap();
-
-               if entries.len() == 0{
-                   writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-                   continue;
-               }
-               for line in current_output.iter(){
-                   //let args_collection: Vec<&str> = command_list.front().unwrap().split(";;").collect();
-                   writeln!(&mut output_pipe, "{}", line).unwrap();
-               }
-               writeln!(&mut output_pipe, "==========================================").unwrap();
-               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args[0] == "last"{
-
-           }
-           else if args[0] == "kill"{
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[1];
-               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-
-               if entries.len() > 0 {
-                   println!("Killing child process...");
-                   let mut child_arc_guard = child_arc_copy.lock().unwrap();
-                   child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
-               }
-
-               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
-           }else if args[0] == "remove"{
-               let remove_list = args[1].split(",").collect::<Vec<&str>>();
-               for pid in remove_list.iter(){
-                   println!("Removing child process {}", pid);
-                   if let Some(index) = entries.iter().position(|entry| entry.get_pid() == *pid){
-                       entries.remove(index);
+                   let mut count = 0;
+                   for entry in entries.iter(){
+                       if count == 0 {
+                           let formatted = format!("{}{}  PID:{}  \"{}\"{}", GREEN, count+1, entry.get_pid(),entry.get_command(), RESET);
+                           writeln!(&mut output_pipe, "{}", formatted).unwrap();
+                       }else{
+                           writeln!(&mut output_pipe, "{}  PID:{}  \"{}\"", count+1, entry.get_pid(),entry.get_command()).unwrap();
+                       }
+                       count += 1;
                    }
-               }
+               },
+               "current" => {
+                   let current_output = current_command_stdout_output.lock().unwrap();
+                   writeln!(&mut output_pipe, "\n Current stdout: {}", entries.len()).unwrap();
+                   writeln!(&mut output_pipe, "==========================================").unwrap();
 
-               let output_pipe_name: String = "oxy_pip_output_".to_string() + &args[2];
-               let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
-               writeln!(&mut output_pipe, "Removing process from queue: {}", args[1]).unwrap();
-               writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+                   for line in current_output.iter() {
+                       writeln!(&mut output_pipe, "{}", line).unwrap();
+                   }
+               },
+               "last" => {
+
+               },
+               "kill" => {
+                   if entries.len() > 0 {
+                       println!("Killing child process...");
+                       let mut child_arc_guard = child_arc_copy.lock().unwrap();
+                       child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
+                   }
+               },
+               "remove" => {
+                   let remove_list = args[2].split(",").collect::<Vec<&str>>();
+                   for rpid in remove_list.iter(){
+                       println!("Removing child process {}", rpid);
+                       if let Some(index) = entries.iter().position(|entry| entry.get_pid() == *rpid){
+                           entries.remove(index);
+                           let remove_pipe_name: String = "oxy_pip_output_".to_string() + *rpid;
+                           let mut remove_pipe = Pipe::with_name(&remove_pipe_name).unwrap();
+                           writeln!(&mut remove_pipe, "{}", "Oxy-over").unwrap();
+                       }
+                   }
+               },
+               _ => {}
            }
-       }
+
+           writeln!(&mut output_pipe, "==========================================").unwrap();
+           writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();       }
     });
 
     let command_entry_add = Arc::clone(&command_entries);
@@ -135,7 +127,7 @@ fn main()  {
             }
 
             let mut command_entry_add_guard = command_entry_add.lock().unwrap();
-            command_entry_add_guard.push_back(CommandEntry::new(args[0].to_string(), args[1].to_string()));
+            command_entry_add_guard.push_back(CommandEntry::new(args[1].to_string(), args[0].to_string()));
             command_tx_clone.send(line.clone()).unwrap();
         }
     });

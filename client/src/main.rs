@@ -49,38 +49,38 @@ fn main() {
         Commands::run{command} => {
             pipe = Pipe::with_name("oxy_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", command, ";;", current_pid).unwrap();
+                writeln!(p, "{}{}{}",current_pid, ";;", command).unwrap();
             }
         }
         Commands::status{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", "status", ";;", current_pid).unwrap();
+                writeln!(p, "{}{}{}", current_pid, ";;", "status").unwrap();
             }
         }
         Commands::current{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", "current", ";;", current_pid).unwrap();
+                writeln!(p, "{}{}{}", current_pid, ";;", "current").unwrap();
             }
         }
         Commands::last {} =>{
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p, "{}{}{}", "last", ";;", current_pid).unwrap();
+                writeln!(p, "{}{}{}", current_pid, ";;", "last").unwrap();
             }
         }
         Commands::kill{} => {
             pipe = Pipe::with_name("oxy_instruction_pipe").ok();
             if let Some(ref mut p) = pipe {
-                writeln!(p,"{}{}{}", "kill", ";;", current_pid).unwrap();
+                writeln!(p,"{}{}{}", current_pid, ";;", "kill").unwrap();
             }
         }
         Commands::remove{pids} => {
             if pids.chars().all(|c| c.is_digit(10) || c == ',') {
                 pipe = Pipe::with_name("oxy_instruction_pipe").ok();
                 if let Some(ref mut p) = pipe {
-                    writeln!(p,"{}{}{}{}{}", "remove", ";;", pids, ";;", current_pid).unwrap();
+                    writeln!(p,"{}{}{}{}{}", current_pid, ";;", "remove", ";;", pids).unwrap();
                 }
             }else{
                 eprintln!("Oxy: Syntax error, only digits are accepted for pids");
