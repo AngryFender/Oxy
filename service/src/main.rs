@@ -92,6 +92,11 @@ fn main()  {
                        println!("Killing child process...");
                        let mut child_arc_guard = child_arc_copy.lock().unwrap();
                        child_arc_guard.deref_mut().take().unwrap().kill().expect("Failed to kill child process");
+
+                       let remove_pipe_name: String = "oxy_pip_output_".to_string() + entries.get(0).unwrap().get_pid();
+                       let mut remove_pipe = Pipe::with_name(&remove_pipe_name).unwrap();
+                       writeln!(&mut remove_pipe, "{}", "Oxy-over").unwrap();
+                       println!("Killing {}", entries.get(0).unwrap().get_pid());
                    }
                },
                "remove" => {
