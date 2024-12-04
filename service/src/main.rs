@@ -2,7 +2,7 @@ mod temppipe;
 mod childprocess;
 mod commandentry;
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use temppipe::TempPipe;
 use ipipe::{Pipe};
 use std::io::{BufRead};
@@ -26,6 +26,7 @@ fn main()  {
     let (command_tx,command_rx) = unbounded();
     let (instruction_tx,instruction_rx) = mpsc::channel();
     let command_entries = Arc::new(Mutex::new(VecDeque::<CommandEntry>::new()));
+    let ban_entries = Arc::new(Mutex::new(HashSet::new()));
     let current_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let last_command_output = Arc::new(Mutex::new(VecDeque::<String>::new()));
     let child_arc: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
@@ -41,6 +42,7 @@ fn main()  {
 
     let current_command_stdout_output = Arc::clone(&current_command_output);
     let command_entry_manage = Arc::clone(&command_entries);
+    let ban_entries_udpate = Arc::clone(&ban_entries);
     let child_arc_copy = Arc::clone(&child_arc);
     let thread_instruct = thread::spawn(move ||{
        for instruction in instruction_rx {
@@ -109,6 +111,8 @@ fn main()  {
                            let mut remove_pipe = Pipe::with_name(&remove_pipe_name).unwrap();
                            writeln!(&mut remove_pipe, "{}", "Oxy-over").unwrap();
                        }
+                       let mut ban_update = ban_entries_udpate.lock().unwrap();
+                       ban_update.insert(rpid.to_string());
                    }
                },
                _ => {}
@@ -140,9 +144,10 @@ fn main()  {
     let command_entry_pop = Arc::clone(&command_entries);
     let current_command_output_update = Arc::clone(&current_command_output);
     let child_arc_clone = Arc::clone(&child_arc);
+    let ban_entries_consume = ban_entries.clone();
     let thread_consumer = thread::spawn(move ||
         {
-            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_entry_pop){
+            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_entry_pop, ban_entries_consume){
                 Ok(_)=>println!(""),
                 Err(e)=>eprintln!("Error: {}", e),
             }
