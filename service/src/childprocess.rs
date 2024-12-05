@@ -7,7 +7,7 @@ use ipipe::Pipe;
 use crate::{RED, RESET};
 use crate::commandentry::CommandEntry;
 
-pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_entry_pop: Arc<Mutex<VecDeque<CommandEntry>>>, ban_entries_consume: Arc<Mutex<HashSet<String>>>) -> std::io::Result<()> {
+pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_entry_pop: Arc<Mutex<VecDeque<CommandEntry>>>, ban_entries_consume: Arc<Mutex<HashSet<String>>>, last_command_output_update: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
     for line in command_rx.clone() {
         let args: Vec<&str> = line.split(";;").collect();
 
@@ -17,9 +17,11 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
         let pid = args[0];
         let command = args[1];
 
+
         {
             let mut ban_entries_consume = ban_entries_consume.lock().unwrap();
             if ban_entries_consume.contains(pid) {
+                ban_entries_consume.remove(pid);
                 continue;
             }
         }
@@ -59,6 +61,15 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
             writeln!(&mut output_pipe, "{}{}{}",RED, str_line,RESET).unwrap();
         });
         writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
+        {
+            let mut current_output = current_command_output_update.lock().unwrap();
+            let mut last_output = last_command_output_update.lock().unwrap();
+            last_output.append(&mut current_output);
+            while last_output.len() > 500 {
+                last_output.pop_front();
+            }
+            current_output.clear();
+        }
 
         if let Ok(mut list )= command_entry_pop.lock(){
             list.pop_front();

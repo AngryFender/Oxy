@@ -145,9 +145,10 @@ fn main()  {
     let current_command_output_update = Arc::clone(&current_command_output);
     let child_arc_clone = Arc::clone(&child_arc);
     let ban_entries_consume = ban_entries.clone();
+    let last_command_output_update = last_command_output.clone();
     let thread_consumer = thread::spawn(move ||
         {
-            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_entry_pop, ban_entries_consume){
+            match spawn_child_process(child_arc_clone, command_rx, current_command_output_update, command_entry_pop, ban_entries_consume,last_command_output_update){
                 Ok(_)=>println!(""),
                 Err(e)=>eprintln!("Error: {}", e),
             }
