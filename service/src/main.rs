@@ -41,6 +41,7 @@ fn main()  {
     });
 
     let current_command_stdout_output = Arc::clone(&current_command_output);
+    let last_command_stdout_output = Arc::clone(&last_command_output);
     let command_entry_manage = Arc::clone(&command_entries);
     let ban_entries_udpate = Arc::clone(&ban_entries);
     let child_arc_copy = Arc::clone(&child_arc);
@@ -87,7 +88,13 @@ fn main()  {
                    }
                },
                "last" => {
+                   let last_output = last_command_stdout_output.lock().unwrap();
+                   writeln!(&mut output_pipe, "\n Last process stdout").unwrap();
+                   writeln!(&mut output_pipe, "==========================================").unwrap();
 
+                   for line in last_output.iter() {
+                       writeln!(&mut output_pipe, "{}", line).unwrap();
+                   }
                },
                "kill" => {
                    if entries.len() > 0 {
