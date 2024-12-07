@@ -4,7 +4,7 @@ use std::process::{Command, Stdio, Child};
 use std::sync::{Arc, Mutex};
 use crossbeam_channel::Receiver;
 use ipipe::Pipe;
-use crate::{RED, RESET};
+use crate::{GREEN, RED, RESET};
 use crate::commandentry::CommandEntry;
 
 pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, command_rx:Receiver<String>, current_command_output_update: Arc<Mutex<VecDeque<String>>>, command_entry_pop: Arc<Mutex<VecDeque<CommandEntry>>>, ban_entries_consume: Arc<Mutex<HashSet<String>>>, last_command_output_update: Arc<Mutex<VecDeque<String>>>) -> std::io::Result<()> {
@@ -48,6 +48,12 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
         let output_pipe_name: String = "oxy_pip_output_".to_string() + pid;
         let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
+        {
+            let current_command = format!({}{}{},GREEN,command,RESET) ;
+            writeln!(&mut output_pipe, "{}", current_command).unwrap();
+            let mut current_output = current_command_output_update.lock().unwrap();
+            current_output.push_back(current_command);
+        }
         stdout_reader.for_each(|line|{
             let mut current_output = current_command_output_update.lock().unwrap();
             let str_line = String::from(line.unwrap());
@@ -58,7 +64,7 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
             let mut current_output = current_command_output_update.lock().unwrap();
             let str_line = String::from(line.unwrap());
             current_output.push_back(str_line.clone());
-            writeln!(&mut output_pipe, "{}{}{}",RED, str_line,RESET).unwrap();
+            writeln!(&mut output_pipe, "{}{}{}", RED, str_line, RESET).unwrap();
         });
         writeln!(&mut output_pipe, "{}", "Oxy-over").unwrap();
         {
