@@ -49,7 +49,7 @@ pub(crate) fn spawn_child_process(child_arc_clone: Arc<Mutex<Option<Child>>>, co
         let mut output_pipe = Pipe::with_name(&output_pipe_name).unwrap();
 
         {
-            let current_command = format!({}{}{},GREEN,command,RESET) ;
+            let current_command = format!("{}{}{}",GREEN,command,RESET) ;
             writeln!(&mut output_pipe, "{}", current_command).unwrap();
             let mut current_output = current_command_output_update.lock().unwrap();
             current_output.push_back(current_command);
