@@ -19,11 +19,17 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    ///run a specific command
     run {command: String},
+    ///show the queue of running commands
     status {},
+    ///shows the stdout of current running command
     current{},
+    ///shows the stdout of previous commands
     last{},
+    ///kill the current running command
     kill{},
+    ///remove future commands from the queue
     remove{ pids: String},
 }
 
