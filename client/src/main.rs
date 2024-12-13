@@ -20,15 +20,26 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     ///run a specific command
+    #[command(short_flag = 'r')]
     run {command: String},
+
     ///show the queue of running commands
+    #[command(short_flag = 's')]
     status {},
+
     ///shows the stdout of current running command
+    #[command(short_flag = 'c')]
     current{},
+
     ///shows the stdout of previous commands
+    #[command(short_flag = 'l')]
     last{},
+
+    #[command(short_flag = 'k')]
     ///kill the current running command
     kill{},
+
+    #[command(short_flag = 'm')]
     ///remove future commands from the queue
     remove{ pids: String},
 }
